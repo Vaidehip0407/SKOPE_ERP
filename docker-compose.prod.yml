@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: skope_postgres_prod
+    environment:
+      POSTGRES_DB: skope_erp
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-your_secure_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - skope_network
+    restart: unless-stopped
+
+  # Backend Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: skope_backend_prod
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-your_secure_password}@postgres:5432/skope_erp
+      - CORS_ORIGINS=http://localhost,http://frontend
+    depends_on:
+      - postgres
+    volumes:
+      - backend_uploads:/app/uploads
+    networks:
+      - skope_network
+    restart: unless-stopped
+
+  # Frontend Service (Production)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    container_name: skope_frontend_prod
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - skope_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  backend_uploads:
+
+networks:
+  skope_network:
+    driver: bridge
