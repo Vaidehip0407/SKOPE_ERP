@@ -1,5 +1,5 @@
-# Frontend Dockerfile
-FROM node:18-alpine
+# Production Frontend Dockerfile with Nginx
+FROM node:18-alpine as builder
 
 # Set working directory
 WORKDIR /app
@@ -13,8 +13,20 @@ RUN npm install
 # Copy source code
 COPY . .
 
-# Expose port
-EXPOSE 3000
+# Build the application
+RUN npm run build
 
-# Command to run the development server
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "3000"]
+# Production stage with Nginx
+FROM nginx:alpine
+
+# Copy built assets from builder stage
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copy nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Expose port
+EXPOSE 80
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]
